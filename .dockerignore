@@ -1,0 +1,15 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env
+.env.*
+.vscode
+.idea
+coverage
+.turbo
+e2e
+test-results
+playwright-report
+blob-report
