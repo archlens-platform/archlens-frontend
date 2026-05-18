@@ -1,0 +1,27 @@
+src/lib/mermaid-render-queue.test.ts
+  s_0fe0b0ea232cb8::t_8bd1f1cc0c0385 1-90
+src/components/page-transition.test.tsx
+  s_0fe0b0ea232cb8::t_79d55c49368b47 1-34
+src/components/mermaid-renderer.test.tsx
+  s_0fe0b0ea232cb8::t_520b51e27abcaf 1-136
+src/lib/mermaid-diagram.test.ts
+  s_0fe0b0ea232cb8::t_7f1e7ab224f172 1-327
+src/components/fixed-diagram.test.tsx
+  s_0fe0b0ea232cb8::t_44df4be8899514 1-226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "0cf12dd99881401fd3023f92ff83e0ff34b94a44",
+  "prompts": {},
+  "sessions": {
+    "s_0fe0b0ea232cb8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c8683f97-9450-43bf-9576-6863b496e20f",
+        "model": "claude-opus-4-7-thinking-xhigh"
+      },
+      "human_author": "Rafael Pereira <66394829+rafahenrique1@users.noreply.github.com>"
+    }
+  }
+}
