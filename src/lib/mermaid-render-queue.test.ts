@@ -1,24 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const initializeMock = vi.fn();
-const renderMock = vi.fn(async (uid: string) => {
-  document.body.insertAdjacentHTML("beforeend", `<div id="${uid}"></div>`);
-  document.body.insertAdjacentHTML("beforeend", `<div id="d${uid}"></div>`);
-  return { svg: `<svg data-uid="${uid}"></svg>` };
-});
+const { mockInitialize, mockRender } = vi.hoisted(() => ({
+  mockInitialize: vi.fn(),
+  mockRender: vi.fn(),
+}));
 
 vi.mock("mermaid", () => ({
-  default: {
-    initialize: (...args: unknown[]) => initializeMock(...args),
-    render: (...args: unknown[]) => renderMock(...(args as [string, string])),
-  },
+  default: { initialize: mockInitialize, render: mockRender },
 }));
 
 beforeEach(() => {
   vi.resetModules();
-  initializeMock.mockClear();
-  renderMock.mockClear();
-  renderMock.mockImplementation(async (uid: string) => {
+  mockInitialize.mockClear();
+  mockRender.mockClear();
+  mockRender.mockImplementation(async (uid: string) => {
     document.body.insertAdjacentHTML("beforeend", `<div id="${uid}"></div>`);
     document.body.insertAdjacentHTML("beforeend", `<div id="d${uid}"></div>`);
     return { svg: `<svg data-uid="${uid}"></svg>` };
@@ -35,8 +30,8 @@ describe("renderMermaid", () => {
     const { renderMermaid } = await import("./mermaid-render-queue");
     const svg = await renderMermaid("graph TD; A-->B", false);
     expect(svg).toContain("<svg");
-    expect(initializeMock).toHaveBeenCalledTimes(1);
-    expect(initializeMock).toHaveBeenCalledWith(
+    expect(mockInitialize).toHaveBeenCalledTimes(1);
+    expect(mockInitialize).toHaveBeenCalledWith(
       expect.objectContaining({
         startOnLoad: false,
         theme: "base",
@@ -48,7 +43,7 @@ describe("renderMermaid", () => {
   it("strips ```mermaid fences before rendering", async () => {
     const { renderMermaid } = await import("./mermaid-render-queue");
     await renderMermaid("```mermaid\ngraph TD; A-->B\n```", false);
-    const [, code] = renderMock.mock.calls[0];
+    const [, code] = mockRender.mock.calls[0];
     expect(code).toBe("graph TD; A-->B");
   });
 
@@ -56,14 +51,14 @@ describe("renderMermaid", () => {
     const { renderMermaid } = await import("./mermaid-render-queue");
     await renderMermaid("graph TD; A-->B", false);
     await renderMermaid("graph TD; A-->B", true);
-    expect(initializeMock).toHaveBeenCalledTimes(2);
+    expect(mockInitialize).toHaveBeenCalledTimes(2);
   });
 
   it("does not reinitialize when the theme stays the same", async () => {
     const { renderMermaid } = await import("./mermaid-render-queue");
     await renderMermaid("graph TD; A-->B", false);
     await renderMermaid("graph TD; A-->C", false);
-    expect(initializeMock).toHaveBeenCalledTimes(1);
+    expect(mockInitialize).toHaveBeenCalledTimes(1);
   });
 
   it("cleans up stray nodes inserted by mermaid after a successful render", async () => {
@@ -74,14 +69,14 @@ describe("renderMermaid", () => {
   });
 
   it("rejects and reinitializes when mermaid throws during render", async () => {
-    renderMock.mockRejectedValueOnce(new Error("boom"));
+    mockRender.mockRejectedValueOnce(new Error("boom"));
     const { renderMermaid } = await import("./mermaid-render-queue");
     await expect(renderMermaid("graph TD; A-->B", false)).rejects.toThrow("boom");
-    expect(initializeMock).toHaveBeenCalledTimes(2);
+    expect(mockInitialize).toHaveBeenCalledTimes(2);
   });
 
   it("recovers and continues to honor subsequent calls after a failure", async () => {
-    renderMock.mockRejectedValueOnce(new Error("first"));
+    mockRender.mockRejectedValueOnce(new Error("first"));
     const { renderMermaid } = await import("./mermaid-render-queue");
     await expect(renderMermaid("graph TD; A", false)).rejects.toThrow("first");
     const svg = await renderMermaid("graph TD; A-->B", false);

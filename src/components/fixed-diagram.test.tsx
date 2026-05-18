@@ -2,55 +2,56 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { FixedDiagram } from "./fixed-diagram";
 
-const generateFixedDiagramMock = vi.fn();
+// vi.hoisted ensures the mock variables exist when vi.mock factories run,
+// since vi.mock calls are hoisted above the module body.
+const {
+  mockGenerateFixedDiagram,
+  mockToastSuccess,
+  mockToastError,
+  mockMermaidInit,
+  mockMermaidRender,
+  mockHtml2canvas,
+  mockJsPdf,
+} = vi.hoisted(() => ({
+  mockGenerateFixedDiagram: vi.fn(),
+  mockToastSuccess: vi.fn(),
+  mockToastError: vi.fn(),
+  mockMermaidInit: vi.fn(),
+  mockMermaidRender: vi.fn(),
+  mockHtml2canvas: vi.fn(),
+  mockJsPdf: {
+    setFontSize: vi.fn(),
+    setTextColor: vi.fn(),
+    text: vi.fn(),
+    addImage: vi.fn(),
+    save: vi.fn(),
+  },
+}));
+
 vi.mock("@/lib/api", () => ({
-  generateFixedDiagram: (analysisId: string, diagramName?: string | null) =>
-    generateFixedDiagramMock(analysisId, diagramName),
+  generateFixedDiagram: mockGenerateFixedDiagram,
 }));
 
-const toastSuccess = vi.fn();
-const toastError = vi.fn();
 vi.mock("sonner", () => ({
-  toast: {
-    success: (...args: unknown[]) => toastSuccess(...args),
-    error: (...args: unknown[]) => toastError(...args),
-  },
+  toast: { success: mockToastSuccess, error: mockToastError },
 }));
 
-const mermaidInit = vi.fn();
-const mermaidRender = vi.fn();
 vi.mock("mermaid", () => ({
-  default: {
-    initialize: (...args: unknown[]) => mermaidInit(...args),
-    render: (...args: unknown[]) =>
-      mermaidRender(...(args as [string, string])),
-  },
+  default: { initialize: mockMermaidInit, render: mockMermaidRender },
 }));
 
-const html2canvasMock = vi.fn();
-vi.mock("html2canvas-pro", () => ({
-  default: (...args: unknown[]) => html2canvasMock(...args),
-}));
+vi.mock("html2canvas-pro", () => ({ default: mockHtml2canvas }));
 
-const jsPdfMock = {
-  setFontSize: vi.fn(),
-  setTextColor: vi.fn(),
-  text: vi.fn(),
-  addImage: vi.fn(),
-  save: vi.fn(),
-};
-vi.mock("jspdf", () => ({
-  jsPDF: vi.fn(() => jsPdfMock),
-}));
+vi.mock("jspdf", () => ({ jsPDF: vi.fn(() => mockJsPdf) }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  generateFixedDiagramMock.mockResolvedValue({
+  mockGenerateFixedDiagram.mockResolvedValue({
     mermaid: "graph TD; A-->B",
     provider: "openai",
   });
-  mermaidRender.mockResolvedValue({ svg: "<svg id='fixed-svg'></svg>" });
-  html2canvasMock.mockResolvedValue({
+  mockMermaidRender.mockResolvedValue({ svg: "<svg id='fixed-svg'></svg>" });
+  mockHtml2canvas.mockResolvedValue({
     toDataURL: () => "data:image/png;base64,xxx",
     width: 400,
     height: 200,
@@ -70,11 +71,11 @@ describe("FixedDiagram", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
 
     await waitFor(() => {
-      expect(generateFixedDiagramMock).toHaveBeenCalledWith("abc", "My Diagram");
+      expect(mockGenerateFixedDiagram).toHaveBeenCalledWith("abc", "My Diagram");
     });
 
     await waitFor(() => {
-      expect(toastSuccess).toHaveBeenCalledWith(
+      expect(mockToastSuccess).toHaveBeenCalledWith(
         "Corrected diagram generated!",
       );
     });
@@ -93,17 +94,17 @@ describe("FixedDiagram", () => {
     });
 
     await waitFor(() => {
-      expect(mermaidRender).toHaveBeenCalled();
+      expect(mockMermaidRender).toHaveBeenCalled();
     });
   });
 
   it("notifies and collapses the panel when the API call fails", async () => {
-    generateFixedDiagramMock.mockRejectedValueOnce(new Error("boom"));
+    mockGenerateFixedDiagram.mockRejectedValueOnce(new Error("boom"));
     render(<FixedDiagram analysisId="abc" />);
     fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
 
     await waitFor(() => {
-      expect(toastError).toHaveBeenCalledWith(
+      expect(mockToastError).toHaveBeenCalledWith(
         "Failed to generate corrected diagram. Please try again.",
       );
     });
@@ -114,12 +115,12 @@ describe("FixedDiagram", () => {
   });
 
   it("falls back to a code preview when mermaid throws while rendering", async () => {
-    mermaidRender.mockRejectedValue(new Error("invalid"));
+    mockMermaidRender.mockRejectedValue(new Error("invalid"));
     render(<FixedDiagram analysisId="abc" />);
     fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
 
     await waitFor(() => {
-      expect(mermaidRender).toHaveBeenCalled();
+      expect(mockMermaidRender).toHaveBeenCalled();
     });
 
     await waitFor(() => {
@@ -133,12 +134,12 @@ describe("FixedDiagram", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
 
     await waitFor(() => {
-      expect(generateFixedDiagramMock).toHaveBeenCalledTimes(1);
+      expect(mockGenerateFixedDiagram).toHaveBeenCalledTimes(1);
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Regenerate/i }));
     await waitFor(() => {
-      expect(generateFixedDiagramMock).toHaveBeenCalledTimes(2);
+      expect(mockGenerateFixedDiagram).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -165,7 +166,7 @@ describe("FixedDiagram", () => {
   });
 
   it("exports the PDF using a portrait layout for tall canvases", async () => {
-    html2canvasMock.mockResolvedValueOnce({
+    mockHtml2canvas.mockResolvedValueOnce({
       toDataURL: () => "data:image/png;base64,tall",
       width: 200,
       height: 400,
@@ -175,18 +176,18 @@ describe("FixedDiagram", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
 
     await waitFor(() => {
-      expect(mermaidRender).toHaveBeenCalled();
+      expect(mockMermaidRender).toHaveBeenCalled();
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Export PDF/i }));
 
     await waitFor(() => {
-      expect(jsPdfMock.save).toHaveBeenCalledWith(
+      expect(mockJsPdf.save).toHaveBeenCalledWith(
         "archlens-fixed-Service_Map.pdf",
       );
     });
 
-    expect(toastSuccess).toHaveBeenCalledWith("PDF exported successfully!");
+    expect(mockToastSuccess).toHaveBeenCalledWith("PDF exported successfully!");
   });
 
   it("uses a landscape layout when the canvas is wider than tall", async () => {
@@ -194,33 +195,33 @@ describe("FixedDiagram", () => {
     fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
 
     await waitFor(() => {
-      expect(mermaidRender).toHaveBeenCalled();
+      expect(mockMermaidRender).toHaveBeenCalled();
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Export PDF/i }));
 
     await waitFor(() => {
-      expect(jsPdfMock.save).toHaveBeenCalled();
+      expect(mockJsPdf.save).toHaveBeenCalled();
     });
 
-    const savedFilename = jsPdfMock.save.mock.calls[0][0] as string;
+    const savedFilename = mockJsPdf.save.mock.calls[0][0] as string;
     expect(savedFilename).toBe("archlens-fixed-diagram.pdf");
   });
 
   it("notifies when the PDF export fails", async () => {
-    html2canvasMock.mockRejectedValueOnce(new Error("canvas error"));
+    mockHtml2canvas.mockRejectedValueOnce(new Error("canvas error"));
 
     render(<FixedDiagram analysisId="abc" />);
     fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
 
     await waitFor(() => {
-      expect(mermaidRender).toHaveBeenCalled();
+      expect(mockMermaidRender).toHaveBeenCalled();
     });
 
     fireEvent.click(screen.getByRole("button", { name: /Export PDF/i }));
 
     await waitFor(() => {
-      expect(toastError).toHaveBeenCalledWith("Failed to export PDF.");
+      expect(mockToastError).toHaveBeenCalledWith("Failed to export PDF.");
     });
   });
 });

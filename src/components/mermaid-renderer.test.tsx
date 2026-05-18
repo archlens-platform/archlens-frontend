@@ -2,37 +2,45 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MermaidRenderer } from "./mermaid-renderer";
 
-let mockTheme = "light";
+const themeRef = vi.hoisted(() => ({ value: "light" }));
 vi.mock("next-themes", () => ({
-  useTheme: () => ({ resolvedTheme: mockTheme }),
+  useTheme: () => ({ resolvedTheme: themeRef.value }),
 }));
 
-const renderMermaidMock = vi.fn();
+const {
+  mockRenderMermaid,
+  mockApplyComponentStyles,
+  mockApplyAutoComponentStyles,
+  mockApplyEdgeLabelStyles,
+} = vi.hoisted(() => ({
+  mockRenderMermaid: vi.fn(),
+  mockApplyComponentStyles: vi.fn((svg: string) => svg),
+  mockApplyAutoComponentStyles: vi.fn(),
+  mockApplyEdgeLabelStyles: vi.fn(),
+}));
+
 vi.mock("@/lib/mermaid-render-queue", () => ({
-  renderMermaid: (code: string, isDark: boolean) => renderMermaidMock(code, isDark),
+  renderMermaid: mockRenderMermaid,
 }));
 
-const applyComponentStylesMock = vi.fn((svg: string) => svg);
-const applyAutoComponentStylesMock = vi.fn();
-const applyEdgeLabelStylesMock = vi.fn();
 vi.mock("@/lib/mermaid-diagram", () => ({
-  applyComponentStyles: (...args: unknown[]) => applyComponentStylesMock(...(args as [string])),
-  applyAutoComponentStyles: (...args: unknown[]) => applyAutoComponentStylesMock(...args),
-  applyEdgeLabelStyles: (...args: unknown[]) => applyEdgeLabelStylesMock(...args),
+  applyComponentStyles: mockApplyComponentStyles,
+  applyAutoComponentStyles: mockApplyAutoComponentStyles,
+  applyEdgeLabelStyles: mockApplyEdgeLabelStyles,
 }));
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockTheme = "light";
-  renderMermaidMock.mockResolvedValue(
+  themeRef.value = "light";
+  mockRenderMermaid.mockResolvedValue(
     '<svg width="200" height="100"><g></g></svg>',
   );
-  applyComponentStylesMock.mockImplementation((svg: string) => svg);
+  mockApplyComponentStyles.mockImplementation((svg: string) => svg);
 });
 
 describe("MermaidRenderer", () => {
   it("renders nothing visible while loading and shows the loader text", () => {
-    renderMermaidMock.mockReturnValue(new Promise(() => {}));
+    mockRenderMermaid.mockReturnValue(new Promise(() => {}));
     render(<MermaidRenderer code="graph TD; A-->B" />);
     expect(screen.getByText(/Rendering diagram/i)).toBeInTheDocument();
   });
@@ -42,7 +50,7 @@ describe("MermaidRenderer", () => {
     await waitFor(() => {
       expect(container.querySelector("svg")).toBeInTheDocument();
     });
-    expect(applyEdgeLabelStylesMock).toHaveBeenCalled();
+    expect(mockApplyEdgeLabelStyles).toHaveBeenCalled();
   });
 
   it("applies component styles when components are provided", async () => {
@@ -55,23 +63,23 @@ describe("MermaidRenderer", () => {
       />,
     );
     await waitFor(() => {
-      expect(applyComponentStylesMock).toHaveBeenCalled();
+      expect(mockApplyComponentStyles).toHaveBeenCalled();
     });
-    expect(applyAutoComponentStylesMock).not.toHaveBeenCalled();
+    expect(mockApplyAutoComponentStyles).not.toHaveBeenCalled();
   });
 
   it("falls back to auto component styling when no components are provided", async () => {
     render(<MermaidRenderer code="graph TD; A-->B" />);
     await waitFor(() => {
-      expect(applyAutoComponentStylesMock).toHaveBeenCalled();
+      expect(mockApplyAutoComponentStyles).toHaveBeenCalled();
     });
   });
 
   it("forwards the dark flag from next-themes to the renderer", async () => {
-    mockTheme = "dark";
+    themeRef.value = "dark";
     render(<MermaidRenderer code="graph TD; A" />);
     await waitFor(() => {
-      expect(renderMermaidMock).toHaveBeenCalledWith("graph TD; A", true);
+      expect(mockRenderMermaid).toHaveBeenCalledWith("graph TD; A", true);
     });
   });
 
@@ -83,7 +91,7 @@ describe("MermaidRenderer", () => {
   });
 
   it("retries failed renders up to the max and shows the error state", async () => {
-    renderMermaidMock.mockRejectedValue(new Error("nope"));
+    mockRenderMermaid.mockRejectedValue(new Error("nope"));
     render(<MermaidRenderer code="graph TD; A-->B" />);
 
     await waitFor(
@@ -92,11 +100,11 @@ describe("MermaidRenderer", () => {
       },
       { timeout: 4000 },
     );
-    expect(renderMermaidMock).toHaveBeenCalledTimes(3);
+    expect(mockRenderMermaid).toHaveBeenCalledTimes(3);
   });
 
   it("shows the regenerate copy when an onRenderError handler is provided", async () => {
-    renderMermaidMock.mockRejectedValue(new Error("nope"));
+    mockRenderMermaid.mockRejectedValue(new Error("nope"));
     const onError = vi.fn();
     render(<MermaidRenderer code="graph TD; A-->B" onRenderError={onError} />);
 
@@ -112,7 +120,7 @@ describe("MermaidRenderer", () => {
   });
 
   it("retries internally when the retry button is clicked without an onRenderError prop", async () => {
-    renderMermaidMock.mockRejectedValue(new Error("nope"));
+    mockRenderMermaid.mockRejectedValue(new Error("nope"));
     render(<MermaidRenderer code="graph TD; A-->B" />);
 
     await waitFor(
@@ -122,15 +130,15 @@ describe("MermaidRenderer", () => {
       { timeout: 4000 },
     );
 
-    const before = renderMermaidMock.mock.calls.length;
+    const before = mockRenderMermaid.mock.calls.length;
     screen.getByRole("button", { name: /Retry/i }).click();
     await waitFor(() => {
-      expect(renderMermaidMock.mock.calls.length).toBeGreaterThan(before);
+      expect(mockRenderMermaid.mock.calls.length).toBeGreaterThan(before);
     });
   });
 
   it("does nothing when given an empty code prop", () => {
     render(<MermaidRenderer code="" />);
-    expect(renderMermaidMock).not.toHaveBeenCalled();
+    expect(mockRenderMermaid).not.toHaveBeenCalled();
   });
 });

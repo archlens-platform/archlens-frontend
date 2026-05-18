@@ -125,9 +125,11 @@ describe("buildMermaidSyntax", () => {
       { name: "auth@", type: "service", description: "", confidence: 1 },
       { name: "auth#", type: "service", description: "", confidence: 1 },
     ];
+    // sanitizeId("auth!") collapses the punctuation to "auth_", so the
+    // disambiguator appends "_<n>" producing "auth__2", "auth__3".
     const syntax = buildMermaidSyntax(components, []);
-    expect(syntax).toContain("auth_2");
-    expect(syntax).toContain("auth_3");
+    expect(syntax).toContain("auth__2");
+    expect(syntax).toContain("auth__3");
   });
 
   it("draws edges between components and uses the connection type as label", () => {
@@ -274,39 +276,79 @@ describe("applyComponentStyles", () => {
 });
 
 describe("applyAutoComponentStyles", () => {
-  function makeSvg(html: string): SVGElement {
-    document.body.innerHTML = `<svg>${html}</svg>`;
-    return document.body.querySelector("svg") as unknown as SVGElement;
+  const svgNs = "http://www.w3.org/2000/svg";
+
+  function makeSvgWithLabel(
+    labelSelector: "nodeLabel" | "text" | "foreignSpan",
+    label: string,
+  ): { svg: SVGElement; rect: SVGElement } {
+    const svg = document.createElementNS(svgNs, "svg") as SVGElement;
+    const g = document.createElementNS(svgNs, "g") as SVGElement;
+    g.setAttribute("class", "node");
+
+    if (labelSelector === "nodeLabel") {
+      const el = document.createElementNS(svgNs, "text");
+      el.setAttribute("class", "nodeLabel");
+      el.textContent = label;
+      g.appendChild(el);
+    } else if (labelSelector === "text") {
+      const el = document.createElementNS(svgNs, "text");
+      el.textContent = label;
+      g.appendChild(el);
+    } else {
+      const fo = document.createElementNS(svgNs, "foreignObject");
+      const span = document.createElement("span");
+      span.textContent = label;
+      fo.appendChild(span);
+      g.appendChild(fo);
+    }
+
+    const rect = document.createElementNS(svgNs, "rect") as SVGElement;
+    g.appendChild(rect);
+    svg.appendChild(g);
+    document.body.appendChild(svg);
+    return { svg, rect };
+  }
+
+  // jsdom normalizes hex colors set via element.style to rgb() form.
+  function hexToRgb(hex: string): string {
+    const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    if (!m) return hex;
+    return `rgb(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)})`;
   }
 
   beforeEach(() => {
     document.body.innerHTML = "";
   });
 
-  it("colors nodes based on their label content", () => {
-    const svg = makeSvg(
-      '<g class="node"><span class="nodeLabel">Database Primary</span><rect></rect></g>',
-    );
+  it("colors nodes based on their .nodeLabel text content", () => {
+    const { svg, rect } = makeSvgWithLabel("nodeLabel", "Database Primary");
     applyAutoComponentStyles(svg, false);
-    const rect = svg.querySelector("rect") as SVGElement;
-    expect(rect.style.fill).toBe("#059669");
-    expect(rect.style.stroke).toBe("#10b981");
+    expect(rect.style.fill).toBe(hexToRgb("#059669"));
+    expect(rect.style.stroke).toBe(hexToRgb("#10b981"));
   });
 
   it("skips nodes without a readable label", () => {
-    const svg = makeSvg('<g class="node"><rect></rect></g>');
+    const svg = document.createElementNS(svgNs, "svg") as SVGElement;
+    const g = document.createElementNS(svgNs, "g") as SVGElement;
+    g.setAttribute("class", "node");
+    const rect = document.createElementNS(svgNs, "rect") as SVGElement;
+    g.appendChild(rect);
+    svg.appendChild(g);
     applyAutoComponentStyles(svg, false);
-    const rect = svg.querySelector("rect") as SVGElement;
     expect(rect.style.fill).toBe("");
   });
 
+  it("falls back to the plain text node when nodeLabel is missing", () => {
+    const { svg, rect } = makeSvgWithLabel("text", "Redis Cache");
+    applyAutoComponentStyles(svg, false);
+    expect(rect.style.fill).toBe(hexToRgb("#dc2626"));
+  });
+
   it("falls back to the foreignObject span when other labels are missing", () => {
-    const svg = makeSvg(
-      '<g class="node"><foreignObject><span>API Gateway</span></foreignObject><rect></rect></g>',
-    );
+    const { svg, rect } = makeSvgWithLabel("foreignSpan", "API Gateway");
     applyAutoComponentStyles(svg, true);
-    const rect = svg.querySelector("rect") as SVGElement;
-    expect(rect.style.fill).toBe("#4c1d95");
+    expect(rect.style.fill).toBe(hexToRgb("#4c1d95"));
   });
 });
 
