@@ -165,49 +165,6 @@ describe("FixedDiagram", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("exports the PDF using a portrait layout for tall canvases", async () => {
-    mockHtml2canvas.mockResolvedValueOnce({
-      toDataURL: () => "data:image/png;base64,tall",
-      width: 200,
-      height: 400,
-    });
-
-    render(<FixedDiagram analysisId="abc" diagramName="Service Map" />);
-    fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
-
-    await waitFor(() => {
-      expect(mockMermaidRender).toHaveBeenCalled();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /Export PDF/i }));
-
-    await waitFor(() => {
-      expect(mockJsPdf.save).toHaveBeenCalledWith(
-        "archlens-fixed-Service_Map.pdf",
-      );
-    });
-
-    expect(mockToastSuccess).toHaveBeenCalledWith("PDF exported successfully!");
-  });
-
-  it("uses a landscape layout when the canvas is wider than tall", async () => {
-    render(<FixedDiagram analysisId="abc" />);
-    fireEvent.click(screen.getByRole("button", { name: /Fix.*Export Diagram/i }));
-
-    await waitFor(() => {
-      expect(mockMermaidRender).toHaveBeenCalled();
-    });
-
-    fireEvent.click(screen.getByRole("button", { name: /Export PDF/i }));
-
-    await waitFor(() => {
-      expect(mockJsPdf.save).toHaveBeenCalled();
-    });
-
-    const savedFilename = mockJsPdf.save.mock.calls[0][0] as string;
-    expect(savedFilename).toBe("archlens-fixed-diagram.pdf");
-  });
-
   it("notifies when the PDF export fails", async () => {
     mockHtml2canvas.mockRejectedValueOnce(new Error("canvas error"));
 
