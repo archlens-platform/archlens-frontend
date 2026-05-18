@@ -1,0 +1,39 @@
+src/components/mermaid-renderer.test.tsx
+  s_0fe0b0ea232cb8::t_1780ba59911a91 53
+  s_0fe0b0ea232cb8::t_3c68fb44149e1d 79
+  s_0fe0b0ea232cb8::t_25a62246cd6ea5 66
+  s_0fe0b0ea232cb8::t_30fd8cf4fb4e20 5,7-19,23,27-29,34-35,38
+  s_0fe0b0ea232cb8::t_a2f40bccb67b5a 43,82,94,103,107,123,133,136,142
+  s_0fe0b0ea232cb8::t_50b17ed88d4bdb 68,74
+src/lib/mermaid-render-queue.test.ts
+  s_0fe0b0ea232cb8::t_c7b65a95cbdea2 3-6,9,14-16
+  s_0fe0b0ea232cb8::t_36d5c37a372052 33-34,54,61,75
+  s_0fe0b0ea232cb8::t_3ae298e7b6fa4f 46,72,79
+src/components/fixed-diagram.test.tsx
+  s_0fe0b0ea232cb8::t_fb8b7046de1812 169,212
+  s_0fe0b0ea232cb8::t_0b44ff5990c599 185,204,207
+  s_0fe0b0ea232cb8::t_8db5fc016eaa1c 74,102,137,142
+  s_0fe0b0ea232cb8::t_02f21014184e55 5-30,32,36,40,43,45,49,53-54
+  s_0fe0b0ea232cb8::t_5f0e7dddbc4f65 78,190
+  s_0fe0b0ea232cb8::t_d7d6f32812e222 97,118,123,179,198,218
+  s_0fe0b0ea232cb8::t_839d8ff5ee0e1e 107,224
+src/lib/mermaid-diagram.test.ts
+  s_0fe0b0ea232cb8::t_2880b3e5327af3 128-129,131-132
+  s_0fe0b0ea232cb8::t_5edbc420029325 279-317,324-325,327-328,332-337,342-347,349,351
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "5ecb4676abea4f64d5b2a28f9f6679f44d9553db",
+  "prompts": {},
+  "sessions": {
+    "s_0fe0b0ea232cb8": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c8683f97-9450-43bf-9576-6863b496e20f",
+        "model": "claude-opus-4-7-thinking-xhigh"
+      },
+      "human_author": "Rafael Pereira <66394829+rafahenrique1@users.noreply.github.com>"
+    }
+  }
+}
